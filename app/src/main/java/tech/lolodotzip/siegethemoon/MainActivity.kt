@@ -26,7 +26,6 @@ import androidx.compose.runtime.*
 import android.net.Uri
 import android.widget.MediaController
 import android.widget.VideoView
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.viewinterop.AndroidView
@@ -40,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tech.lolodotzip.siegethemoon.ui.theme.OrpheusTotheMoonTheme
-import tech.lolodotzip.siegethemoon.ui.theme.Typography
 
 class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences =
@@ -71,6 +69,15 @@ class PreferencesManager(context: Context) {
     fun addCoins(amount: Int){
         val current = getCoins()
         setCoins(current + amount)
+    }
+    fun removeCoins(amount: Int){
+        val current = getCoins()
+        setCoins((current - amount).coerceAtLeast(0))
+    }
+
+    fun getCosmetic(): String = prefs.getString("selected_cosmetic", "orpheus") ?: "orpheus"
+    fun setCosmetic(cosmetic: String){
+        prefs.edit().putString("selected_cosmetic", cosmetic).apply()
     }
 }
 
@@ -255,8 +262,10 @@ fun fly(storeClicked: () -> Unit = {}) {
     var totalDistance by remember { mutableStateOf(0f) }
     var hasReachedTop by remember { mutableStateOf(false) }
     var Initializing by remember { mutableStateOf(true) }
+    var selectedCosmetic by remember { mutableStateOf(preferencesManager.getCosmetic()) }
 
     LaunchedEffect(Unit) {
+        selectedCosmetic = preferencesManager.getCosmetic()
         delay(100)
         scrollState.scrollTo(scrollState.maxValue)
         delay(50)
@@ -322,6 +331,13 @@ fun fly(storeClicked: () -> Unit = {}) {
         0
     }
 
+    val cosmeticImage = when(selectedCosmetic){
+        "cowboy" -> R.drawable.orpheuscowboyhat
+        "sailor" -> R.drawable.orpheussailorhat
+        "satchel" -> R.drawable.orpheussatchel
+        else -> R.drawable.orpheus
+    }
+
     Box(modifier = Modifier.fillMaxSize()){
         Column(
             modifier = Modifier
@@ -354,7 +370,7 @@ fun fly(storeClicked: () -> Unit = {}) {
                 modifier = Modifier.fillMaxSize()
             ){
                 Image(
-                    painter = painterResource(id = R.drawable.orpheus),
+                    painter = painterResource(id = cosmeticImage),
                     contentDescription = "orpheus flying on a PCB",
                     modifier = Modifier
                         .size(180.dp),
@@ -482,11 +498,120 @@ fun stats() {
 
 @Composable
 fun store() {
+    val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val preferencesManager = remember { PreferencesManager(context) }
+    var coins by remember { mutableStateOf(preferencesManager.getCoins()) }
+    var selectedCosmetic by remember { mutableStateOf(preferencesManager.getCosmetic()) }
+    var cowboyState by remember { mutableStateOf("buy now!") }
+    var sailorState by remember { mutableStateOf("buy now!") }
+    var satchelState by remember { mutableStateOf("buy now!") }
+
+    fun buyCosmetic(cosmeticName: String, cosmeticKey: String, price: Int, onButtonStateChange: (String) -> Unit){
+        if (coins >= price){
+            coins -= price
+            preferencesManager.removeCoins(price)
+            preferencesManager.setCosmetic(cosmeticKey)
+            selectedCosmetic = cosmeticKey
+            onButtonStateChange("owned!")
+        } else {
+            onButtonStateChange("not enough coins!!")
+        }
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
     ) {
-        Text("store page tbd", style = MaterialTheme.typography.headlineSmall)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Image(
+                painter = painterResource(id = R.drawable.orpheuscowboyhat),
+                contentDescription = "cowboy hat cosmetic",
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "cowboy hat cosmetic",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                "10 coins",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    buyCosmetic("cowboy", "cowboy", 10) { newState ->
+                        cowboyState = newState
+                    }
+                },
+                modifier = Modifier
+                    .padding(start = 16.dp)
+            ){
+                Text(cowboyState)
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            Image(
+                painter = painterResource(id = R.drawable.orpheussailorhat),
+                contentDescription = "sailor hat cosmetic",
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "sailor hat cosmetic",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                "20 coins",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    buyCosmetic("sailor", "sailor", 20) { newState ->
+                        sailorState = newState
+                    }
+                },
+                modifier = Modifier
+                    .padding(start = 16.dp)
+            ){
+                Text(sailorState)
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            Image(
+                painter = painterResource(id = R.drawable.orpheussatchel),
+                contentDescription = "satchel cosmetic",
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "satchel cosmetic",
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                "30 coins",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    buyCosmetic("satchel", "satchel", 30){ newState ->
+                        satchelState = newState
+                    }
+                },
+                modifier = Modifier
+                    .padding(start = 16.dp)
+            ){
+                Text(satchelState)
+            }
+            Spacer(modifier = Modifier.height(90.dp))
+        }
     }
 }
 
