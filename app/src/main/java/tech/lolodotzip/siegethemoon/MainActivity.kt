@@ -1,6 +1,7 @@
 package tech.lolodotzip.siegethemoon
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -16,6 +17,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -23,6 +26,8 @@ import androidx.compose.runtime.*
 import android.net.Uri
 import android.widget.MediaController
 import android.widget.VideoView
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,10 +36,32 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.packInts
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tech.lolodotzip.siegethemoon.ui.theme.OrpheusTotheMoonTheme
+
+class PreferencesManager(context: Context) {
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("siege_prefs", Context.MODE_PRIVATE)
+
+    fun getTotalMoon(): Int = prefs.getInt("total_moon", 0)
+    fun setTotalMoon(count: Int) {
+        prefs.edit().putInt("total_moon", count).apply()
+    }
+    fun incrementMoon() {
+        val current = getTotalMoon()
+        setTotalMoon(current + 1)
+    }
+
+    fun getTotalTime(): Long = prefs.getLong("total_time", 0L)
+    fun setTotalTime(milliseconds: Long){
+        prefs.edit().putLong("total_time", milliseconds).apply()
+    }
+    fun addTime(milliseconds: Long){
+        val current = getTotalTime()
+        setTotalTime(current + milliseconds)
+    }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,6 +183,20 @@ fun home() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+
+        Text(
+            text = "welcome!",
+            style = MaterialTheme.typography.headlineLarge
+        )
+
+        Text(
+            text = "let's help heidi and orpheus reach the moon!",
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         AndroidView(
             factory = {
                 VideoView(it).apply {
@@ -193,6 +234,7 @@ fun home() {
 @Composable
 fun fly() {
     val context = LocalContext.current
+    val preferencesManager = remember { PreferencesManager(context) }
     val sensorManager = remember {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
@@ -200,9 +242,32 @@ fun fly() {
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     var totalDistance by remember { mutableStateOf(0f) }
+    var hasReachedTop by remember { mutableStateOf(false) }
+    var Initializing by remember { mutableStateOf(true) }
+
     LaunchedEffect(Unit) {
         delay(100)
         scrollState.scrollTo(scrollState.maxValue)
+        delay(50)
+        Initializing = false
+    }
+
+    LaunchedEffect(scrollState.value) {
+        if (!Initializing && scrollState.value == 0 && !hasReachedTop) {
+            hasReachedTop = true
+            preferencesManager.incrementMoon()
+            totalDistance = 0f
+        } else if (scrollState.value > 0) {
+            hasReachedTop = false
+        }
+    }
+
+    DisposableEffect(Unit){
+        val timeOnFly = System.currentTimeMillis()
+        return@DisposableEffect onDispose {
+            val timeSpent = System.currentTimeMillis() - timeOnFly
+            preferencesManager.addTime(timeSpent)
+        }
     }
 
     DisposableEffect(Unit) {
@@ -238,11 +303,18 @@ fun fly() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val maxHeight = scrollState.maxValue.toFloat()
+    val progress = if (maxHeight > 0){
+        ((maxHeight - scrollState.value) / maxHeight * 100).toInt()
+    } else {
+        0
+    }
+
+    Box(modifier = Modifier.fillMaxSize()){
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .verticalScroll(scrollState, enabled = false)
         ) {
             Image(
                 painter = painterResource(id = R.drawable.background_full),
@@ -252,27 +324,93 @@ fun fly() {
                     .height(12480.dp),
                 contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.height(80.dp))
         }
-
-        Image(
-            painter = painterResource(id = R.drawable.orpheus),
-            contentDescription = "orpheus flying on a PCB",
+        Box(
             modifier = Modifier
-                .align(Alignment.TopCenter),
-            contentScale = ContentScale.Crop
-        )
+                .align(Alignment.Center)
+                .fillMaxWidth(0.8f)
+                .height(300.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ){
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ){
+                Image(
+                    painter = painterResource(id = R.drawable.orpheus),
+                    contentDescription = "orpheus flying on a PCB",
+                    modifier = Modifier
+                        .size(180.dp),
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "start shaking to fly to the moon!",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "$progress% of the way there!",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            }
+        }
     }
-}
 
+}
 
 @Composable
 fun stats() {
+    val context = LocalContext.current
+    val preferencesManager = remember { PreferencesManager(context) }
+    var totalMoon by remember { mutableStateOf(preferencesManager.getTotalMoon()) }
+    var totalTime by remember { mutableStateOf(preferencesManager.getTotalTime()) }
+
+    LaunchedEffect(Unit) {
+        totalMoon = preferencesManager.getTotalMoon()
+        totalTime = preferencesManager.getTotalTime()
+    }
+
+    fun formatTime(milliseconds: Long): String{
+        val totalSeconds = milliseconds / 1000
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02dmin %02ds", minutes, seconds)
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text("stats page tbd", style = MaterialTheme.typography.headlineSmall)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                "times you went to the moon",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                totalMoon.toString(),
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                "total time flying",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                formatTime(totalTime),
+                style = MaterialTheme.typography.displayLarge
+            )
+        }
     }
 }
 
