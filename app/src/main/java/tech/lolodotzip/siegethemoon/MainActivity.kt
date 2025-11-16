@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import android.net.Uri
 import android.widget.MediaController
 import android.widget.VideoView
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.viewinterop.AndroidView
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tech.lolodotzip.siegethemoon.ui.theme.OrpheusTotheMoonTheme
+import tech.lolodotzip.siegethemoon.ui.theme.Typography
 
 class PreferencesManager(context: Context) {
     private val prefs: SharedPreferences =
@@ -60,6 +62,15 @@ class PreferencesManager(context: Context) {
     fun addTime(milliseconds: Long){
         val current = getTotalTime()
         setTotalTime(current + milliseconds)
+    }
+
+    fun getCoins(): Int = prefs.getInt("coins", 0)
+    fun setCoins(amount: Int){
+        prefs.edit().putInt("coins", amount).apply()
+    }
+    fun addCoins(amount: Int){
+        val current = getCoins()
+        setCoins(current + amount)
     }
 }
 
@@ -103,7 +114,7 @@ fun SiegeTheMoonApp() {
         ) {
             when (currentTab) {
                 0 -> home()
-                1 -> fly()
+                1 -> fly(storeClicked = { currentTab = 3 })
                 2 -> stats()
                 3 -> store()
             }
@@ -232,7 +243,7 @@ fun home() {
 }
 
 @Composable
-fun fly() {
+fun fly(storeClicked: () -> Unit = {}) {
     val context = LocalContext.current
     val preferencesManager = remember { PreferencesManager(context) }
     val sensorManager = remember {
@@ -256,6 +267,7 @@ fun fly() {
         if (!Initializing && scrollState.value == 0 && !hasReachedTop) {
             hasReachedTop = true
             preferencesManager.incrementMoon()
+            preferencesManager.addCoins(5)
             totalDistance = 0f
         } else if (scrollState.value > 0) {
             hasReachedTop = false
@@ -348,15 +360,47 @@ fun fly() {
                         .size(180.dp),
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "start shaking to fly to the moon!",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "$progress% of the way there!",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+                if (hasReachedTop){
+                    Text(
+                        text = "you reached the moon!",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    scrollState.scrollTo(scrollState.maxValue)
+                                    hasReachedTop = false
+                                }
+                            },
+                            modifier = Modifier
+                                .padding(end = 16.dp)
+                        ) {
+                            Text("restart flight")
+                        }
+                        Button(
+                            onClick = storeClicked,
+                            modifier = Modifier
+                                .padding(start = 16.dp)
+                        ) {
+                            Text("view store")
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "start shaking to fly to the moon!",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "$progress% of the way there!",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                }
             }
         }
     }
@@ -369,6 +413,7 @@ fun stats() {
     val preferencesManager = remember { PreferencesManager(context) }
     var totalMoon by remember { mutableStateOf(preferencesManager.getTotalMoon()) }
     var totalTime by remember { mutableStateOf(preferencesManager.getTotalTime()) }
+    var coins by remember { mutableStateOf(preferencesManager.getCoins()) }
 
     LaunchedEffect(Unit) {
         totalMoon = preferencesManager.getTotalMoon()
@@ -410,6 +455,27 @@ fun stats() {
                 formatTime(totalTime),
                 style = MaterialTheme.typography.displayLarge
             )
+            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                "current coins",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Text(
+                    coins.toString(),
+                    style = MaterialTheme.typography.displayLarge
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.siegecoin),
+                    contentDescription = "coins represnted by the siege logo",
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
     }
 }
