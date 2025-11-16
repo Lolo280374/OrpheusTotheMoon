@@ -48,7 +48,7 @@ this "game" is compatible on any device running at minimum Android 9 or above (A
 install the game, and you'll immediately tell if they work or not!
 
 ## installation
-to install, you can either head to the [releases](https://github.com/Lolo280374/OrpheusTotheMoon/releases) or the [GitHub Actions](https://github.com/Lolo280374/OrpheusTotheMoon/actions) builds, grab the latest APK avalaible, and install it on your Android (9+) device!
+to install, please go to the [releases](https://github.com/Lolo280374/OrpheusTotheMoon/releases) tab and grab the latest release, and install it on your Android (9+) device!
 
 > [!WARNING]  
 > you may get a Play Protect alert, and that is normal due to the fact that this app has little to no installs, and that I'm not wishing to pay for a Google Play dev acc! you can review the code if you wish, but such alerts are normal.
