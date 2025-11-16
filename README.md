@@ -1,5 +1,6 @@
 <p align="center"><br>
 <a href="https://github.com/Lolo280374/OrpheusTotheMoon"><img src="https://hackatime-badge.hackclub.com/U09CBF0DS4F/OrpheusTotheMoon"></a>
+[![automate APK builds](https://github.com/Lolo280374/OrpheusTotheMoon/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/Lolo280374/OrpheusTotheMoon/actions/workflows/build.yml)
 <a href="https://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
 <a href="https://devrant.com/rants/4149950/i-fucking-hate-mobile-development-i-already-manage-the-data-devops-infra-and-mos"><img src="https://img.shields.io/badge/android-supported-green"></a>
 <a href="https://devrant.com/rants/4149950/i-fucking-hate-mobile-development-i-already-manage-the-data-devops-infra-and-mos"><img src="https://img.shields.io/badge/android 9-and above-white"></a>
